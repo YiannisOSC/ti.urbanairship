@@ -36,14 +36,14 @@ public class UrbanAirshipModule extends KrollModule {
 	@Kroll.constant public static final String EVENT_URBAN_AIRSHIP_SUCCESS = "UrbanAirship_Success";
 	@Kroll.constant public static final String EVENT_URBAN_AIRSHIP_ERROR = "UrbanAirship_Error";
 	@Kroll.constant public static final String EVENT_URBAN_AIRSHIP_CALLBACK = "UrbanAirship_Callback";
-	
+
 	// Property Names
 	private static final String PROPERTY_SHOW_APP_ON_CLICK = "showAppOnClick";
-	
+
 	// Flag used so we only check the intent once
 	private boolean checkCurrentIntent = true;
 	private static boolean onAppCreateCalled = false;
-		
+
 	public UrbanAirshipModule() {
         // Module API level 2 no longer automatically registers the module id or name. In order
         // to have the module name available for the getModuleByName call we must use the
@@ -57,37 +57,37 @@ public class UrbanAirshipModule extends KrollModule {
 
 		// MOD-291 - Improve messaging for invalid setup
 		onAppCreateCalled = true;
-		
+
 		// Take off!!!!
 		airshipTakeOff();
 	}
-	
+
 	@Override
 	public void onStart(Activity activity) {
 		super.onStart(activity);
-		
+
 		// MOD-291 - Improve messaging for invalid setup
 		if (!onAppCreateCalled) {
 			Log.e(LCAT, "Urban Airship module 'onAppCreate' method was not called during process initialization.");
 			Log.e(LCAT, "Please review the module documentation and/or upgrade to the latest version of the module");
 		}
-		
+
 		if (hasListeners(EVENT_URBAN_AIRSHIP_CALLBACK)) {
 			synthesizeMessageIfNeeded();
 		}
 	}
-	
+
 	@Override
 	public void listenerAdded(String type, int count, KrollProxy proxy)	{
 		super.listenerAdded(type, count, proxy);
 
 		if (EVENT_URBAN_AIRSHIP_CALLBACK.equals(type)) {
 	        synthesizeMessageIfNeeded();
-		}	
+		}
 	}
-	
+
 	// Kroll Properties
-	
+
 	@Kroll.getProperty @Kroll.method
 	public boolean getIsFlying() {
 		try {
@@ -102,11 +102,11 @@ public class UrbanAirshipModule extends KrollModule {
 	    	return false;
 	    }
 	}
-	
+
 	@Kroll.getProperty @Kroll.method
 	public Object[] getTags() {
 		if (getIsFlying()) {
-			return PushManager.shared().getTags().toArray();
+			return UAirship.shared().getPushManager().getTags().toArray();
 		}
 		return null;
 	}
@@ -118,14 +118,14 @@ public class UrbanAirshipModule extends KrollModule {
 			for (Object rawTag : rawTags) {
 				tags.add(rawTag.toString());
 			}
-			PushManager.shared().setTags(tags);
+			UAirship.shared().getPushManager().setTags(tags);
 		}
 	}
 
 	@Kroll.getProperty @Kroll.method
 	public String getAlias() {
 		if (getIsFlying()) {
-			return PushManager.shared().getAlias();
+			return UAirship.shared().getPushManager().getAlias();
 		}
 		return null;
 	}
@@ -133,73 +133,77 @@ public class UrbanAirshipModule extends KrollModule {
 	@Kroll.setProperty @Kroll.method
 	public void setAlias(String alias) {
 		if (getIsFlying()) {
-			PushManager.shared().setAlias(alias);
+			UAirship.shared().getPushManager().setAlias(alias);
 		}
 	}
 
 	@Kroll.getProperty @Kroll.method
 	public boolean getPushEnabled() {
 		if (getIsFlying()) {
-			return PushManager.shared().getPreferences().isPushEnabled();
+			return UAirship.shared().getPushManager().isPushEnabled();
 		}
 		return false;
 	}
-	
+
 	@Kroll.setProperty @Kroll.method
 	public void setPushEnabled(boolean enabled) {
 		if (getIsFlying()) {
-			if (enabled)
-				PushManager.enablePush();
-			else
-				PushManager.disablePush();
+				UAirship.shared().getPushManager().setPushEnabled(enabled);
 	    }
 	}
-	
+
+	@Kroll.setProperty @Kroll.method
+	public void setUserNotificationsEnabled( boolean userOn) {
+		if (getIsFlying()) {
+				UAirship.shared().getPushManager().setUserNotificationsEnabled(userOn);
+	    }
+	}
+
 	@Kroll.getProperty @Kroll.method
 	public boolean getSoundEnabled() {
 		if (getIsFlying()) {
-			return PushManager.shared().getPreferences().isSoundEnabled();
+			return UAirship.shared().getPushManager().isSoundEnabled();
 		}
 		return false;
 	}
-	
+
 	@Kroll.setProperty @Kroll.method
 	public void setSoundEnabled(boolean enabled) {
 		if (getIsFlying()) {
-			PushManager.shared().getPreferences().setSoundEnabled(enabled);
+			UAirship.shared().getPushManager().setSoundEnabled(enabled);
 		}
 	}
-	
+
 	@Kroll.getProperty @Kroll.method
 	public boolean getVibrateEnabled() {
 		if (getIsFlying()) {
-			return PushManager.shared().getPreferences().isVibrateEnabled();
+			return UAirship.shared().getPushManager().isVibrateEnabled();
 		}
 		return false;
 	}
-	
+
 	@Kroll.setProperty @Kroll.method
 	public void setVibrateEnabled(boolean enabled) {
 		if (getIsFlying()) {
-			PushManager.shared().getPreferences().setVibrateEnabled(enabled);	
+			UAirship.shared().getPushManager().setVibrateEnabled(enabled);
 		}
 	}
-	
+
 	@Kroll.getProperty @Kroll.method
 	public String getPushId() {
 		if (getIsFlying()) {
-			return PushManager.shared().getPreferences().getPushId();
+			return UAirship.shared().getPushManager().getPushId();
 		}
 		return null;
 	}
-	
+
 	@Kroll.setProperty @Kroll.method
 	public void setPushId(String id) {
 		if (getIsFlying()) {
-			PushManager.shared().getPreferences().setPushId(id);
+			UAirship.shared().getPushManager().setPushId(id);
 		}
 	}
-	
+
 	// Since the module can be unloaded when the activity is closed, the ShowOnAppClick
 	// property is stored in the application properties so that it can be checked
 	// when an intent is received to determine if we should re-launch the activity.
@@ -208,47 +212,46 @@ public class UrbanAirshipModule extends KrollModule {
 		TiProperties appProperties = TiApplication.getInstance().getAppProperties();
 		return appProperties.getBool(PROPERTY_PREFIX + PROPERTY_SHOW_APP_ON_CLICK, false);
 	}
-	
+
 	@Kroll.setProperty @Kroll.method
 	public void setShowOnAppClick(boolean enabled) {
 		TiProperties appProperties = TiApplication.getInstance().getAppProperties();
 		appProperties.setBool(PROPERTY_PREFIX + PROPERTY_SHOW_APP_ON_CLICK, enabled);
 	}
-	
+
 	@Kroll.getProperty @Kroll.method
 	public boolean getShowOnAppClick() {
 		return launchAppOnClick();
 	}
-	
+
 	// Private Helper Methods
-	
+
 	private static void airshipTakeOff() {
 		Log.i(LCAT, "Airship taking off");
 		try {
 			AirshipConfigOptions options = AirshipConfigOptions.loadDefaultOptions(TiApplication.getInstance());
-			
+
 			// NOTE: In-App Purchasing is not currently supported in this module
 			// Remove this next statement once we implement iap
 			options.iapEnabled = false;
-			
+
 			// Attempt takeoff
 			UAirship.takeOff(TiApplication.getInstance(), options);
-			
 			// Airship has successfully taken off. Set up the notification handler
-	        PushManager.shared().setIntentReceiver(IntentReceiver.class);	
+	        UAirship.shared().getPushManager().setIntentReceiver(IntentReceiver.class);
 	    } catch (Exception e) {
 			Log.e(LCAT, "Error occurred during takeoff!!!");
 		}
 	}
 
 	// Message Handler Processing Helpers
-	
+
 	private void synthesizeMessageIfNeeded() {
 		// In the case where the activity is being re-started by the IntentReceiver because
 		// the activity has been unloaded, we need to synthesize the message and call the
 		// callback (if registered) so that it acts as if the message was just received.
 		// This removes the need for the JS app to handle this special case.
-		
+
 		// We should only do this once per activity start
 		if (checkCurrentIntent) {
 			checkCurrentIntent = false;
@@ -271,7 +274,7 @@ public class UrbanAirshipModule extends KrollModule {
 	private static UrbanAirshipModule getModule() {
 		TiApplication appContext = TiApplication.getInstance();
 		UrbanAirshipModule uaModule = (UrbanAirshipModule)appContext.getModuleByName(ModuleName);
-	
+
 		if (uaModule == null) {
 			Log.w(LCAT,"Urban Airship module not currently loaded");
 		}
@@ -280,7 +283,7 @@ public class UrbanAirshipModule extends KrollModule {
 
 	private static void launchActivity(String message, String payload) {
 		TiApplication appContext = TiApplication.getInstance();
-		
+
 		// We need to get the class name for the main application activity. That isn't a problem if
 		// we were started from the home screen of the device. However, if we were started as part
 		// of the Push Service startup then the main activity may not have been started yet. So, we
@@ -292,43 +295,43 @@ public class UrbanAirshipModule extends KrollModule {
 		// We still need to set the category and flags before we try to start the activity
 		launch.addCategory(Intent.CATEGORY_LAUNCHER);
 		launch.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		
+
 		// Set the extras to the message and payload so that they are picked up on relaunch of the activity
 		launch.putExtra("message", message);
 		launch.putExtra("payload", payload);
-		
-		appContext.startActivity(launch);		
+
+		appContext.startActivity(launch);
 	}
-	
+
 	public static void handleReceivedMessage(String message, String payload, Boolean clicked, Boolean launchIfNeeded) {
 	    Log.d(LCAT, "Message: " + message + " Payload: " + payload);
-	    
+
 	    // Get the currently loaded module object. If the activity has been unloaded then this will
 	    // result in uaModule being set to null.
 	    UrbanAirshipModule uaModule = getModule();
-	    
+
 		// If instructed to bring the app to the foreground when clicked, then launch it
 		if (clicked && launchIfNeeded && launchAppOnClick()) {
 			launchActivity(message, payload);
-		}		
+		}
 
 	    if (uaModule != null) {
 		    HashMap<String, Object> kd = new HashMap<String, Object>();
 		    kd.put("clicked", new Boolean(clicked));
 		    kd.put("message", message);
 		    kd.put("payload", payload);
-		    
+
 			uaModule.fireEvent(EVENT_URBAN_AIRSHIP_CALLBACK, kd);
 	    }
 	}
-	
+
     public static void handleRegistrationComplete(String apid, Boolean valid) {
         Log.d(LCAT, "APID: " + apid + " IsValid: " + valid);
-        
+
 	    // Get the currently loaded module object. If the activity has been unloaded then this will
 	    // result in uaModule being set to null.
         UrbanAirshipModule uaModule = getModule();
-        
+
         if (uaModule != null) {
         	HashMap<String, Object> kd = new HashMap<String, Object>();
         	kd.put("deviceToken", apid);

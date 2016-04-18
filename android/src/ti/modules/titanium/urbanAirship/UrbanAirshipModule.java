@@ -19,11 +19,14 @@ import org.appcelerator.kroll.annotations.Kroll;
 import org.appcelerator.titanium.TiApplication;
 import org.appcelerator.kroll.common.Log;
 import org.appcelerator.titanium.TiProperties;
+import org.appcelerator.titanium.util.TiRHelper;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Color;
 
 import com.urbanairship.UAirship;
+import com.urbanairship.push.notifications.DefaultNotificationFactory;
 import com.urbanairship.analytics.Analytics;
 import com.urbanairship.google.PlayServicesUtils;
 
@@ -49,6 +52,8 @@ public class UrbanAirshipModule extends KrollModule {
 	private boolean checkCurrentIntent = true;
 	private boolean userNotificationsEnabled = false;
 	private static boolean onAppCreateCalled = false;
+
+	private static int foo = 0;
 
 	public UrbanAirshipModule() {
         // Module API level 2 no longer automatically registers the module id or name. In order
@@ -216,6 +221,17 @@ public class UrbanAirshipModule extends KrollModule {
 	}
 
 	@Kroll.getProperty @Kroll.method
+    public int getExampleProp(){
+        Log.i(LCAT, "In Module - the stored value for exampleProp:" + foo);
+        return foo;
+    }
+    @Kroll.setProperty @Kroll.method
+    public void setExampleProp(int value) {
+        foo = value;
+		Log.i(LCAT, "In Module - the new value for exampleProp:" + foo);
+    }
+
+	@Kroll.getProperty @Kroll.method
 	public boolean getVibrateEnabled() {
 		if (getIsFlying()) {
 			return UAirship.shared().getPushManager().isVibrateEnabled();
@@ -263,16 +279,73 @@ public class UrbanAirshipModule extends KrollModule {
 	private static void airshipTakeOff() {
 		Log.i(LCAT, "Airship taking off");
 		try {
-			//AirshipConfigOptions options = AirshipConfigOptions.loadDefaultOptions(TiApplication.getInstance());
+			//UAirship.takeOff(TiApplication.getInstance());
+			UAirship.takeOff(TiApplication.getInstance(), new UAirship.OnReadyCallback() {
+				@Override
+	            public void onAirshipReady(UAirship airship) {
+	            	Log.i(LCAT, "Airship ready for configuration");
 
-			// Attempt takeoff
-			//UAirship.takeOff(TiApplication.getInstance(), options);
+					// HashMap<String, Object> kd = new HashMap<String, Object>();
+				    // kd.put("Is Airship ready?", new Boolean(true));
+					// UrbanAirshipModule uaModule = getModule();
+	            	// uaModule.fireEvent(EVENT_URBAN_AIRSHIP_READY, kd);
+					TiApplication appInstance = TiApplication.getInstance();
 
-			UAirship.takeOff(TiApplication.getInstance());
+					TiProperties appProperties = appInstance.getAppProperties();
+					DefaultNotificationFactory factory = new DefaultNotificationFactory(appInstance);
+
+					try{
+						//This color is been defined from tiapp.xml of the Titanium app.
+						//It could be placed as <property name="notificationBgColor" type="string">#bd3e3e</property>
+						String colorString = appProperties.getString("notificationBgColor", "nocolor");
+						int notificationColor = Color.parseColor(colorString);
+						factory.setColor(notificationColor);
+					}catch(Exception e){
+						Log.e(LCAT, "************* problem setting notification color");
+					}
+
+					try{
+						//Large Icon is now the App Icon
+						int notificationLargeIcon = TiRHelper.getApplicationResource("drawable.icon");
+						//Small Icon is just an "i" (information) icon.
+						//Could be any icon from this list: http://developer.android.com/reference/android/R.drawable.html
+						int notificationIcon = TiRHelper.getAndroidResource("drawable.ic_menu_info_details");
+
+						factory.setSmallIconId(notificationIcon);
+						factory.setLargeIcon(notificationLargeIcon);
+					}catch(Exception e){
+						Log.e(LCAT, "************* problem creating notification icon");
+					}
+
+					airship.getPushManager().setNotificationFactory(factory);
+	            }
+			});
 	    } catch (Exception e) {
 			Log.e(LCAT, "Error occurred during takeoff!!!");
 		}
 	}
+
+	private void changeIconColor(){
+
+	}
+
+	/*private int getIdOfModuleAsset(String assetName, String typeWithDot){
+	    // Use this to locate resources in the R.java file (e.g. platform/android/res/drawable)
+	    // In case the caller passes in the asset name with the extension, strip it off
+	    // Prefix the asset name with type
+
+	    int dot = assetName.lastIndexOf(".");
+	    String resourceName = typeWithDot + ((dot > 0) ? assetName.substring(0, dot) : assetName);
+
+	    int result = 0;
+	    try {
+	        result = TiRHelper.getApplicationResource(resourceName);
+	    } catch (ResourceNotFoundException e) {
+	        Log.d("ModdevguideModule", "[ASSETSDEMO] EXCEPTION -- RESOURCE NOT FOUND");
+	    }
+
+	    return result;
+	}*/
 
 	// Message Handler Processing Helpers
 	private HashMap<String, Object> getIntentExtras(Intent intent) {
